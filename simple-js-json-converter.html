@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversor Simples de JS para JSON</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .container {
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .instructions {
+      background-color: #f5f5f5;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-left: 4px solid #333;
+    }
+    #convertButton {
+      padding: 8px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #convertButton:disabled {
+      background-color: #cccccc;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+    }
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+    }
+    .download-link {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 8px 15px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Conversor de JS para JSON</h1>
+    
+    <div class="instructions">
+      <p><strong>Instruções:</strong></p>
+      <ol>
+        <li>Selecione seu arquivo contacts.js que contém <code>window.dict=[...]</code></li>
+        <li>Clique em "Converter para JSON"</li>
+        <li>Aguarde o processamento</li>
+        <li>Faça o download do arquivo JSON gerado</li>
+      </ol>
+    </div>
+    
+    <div>
+      <input type="file" id="fileInput" accept=".js">
+      <button id="convertButton" disabled>Converter para JSON</button>
+    </div>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    document.getElementById('fileInput').addEventListener('change', function() {
+      const convertButton = document.getElementById('convertButton');
+      convertButton.disabled = !this.files.length;
+    });
+
+    document.getElementById('convertButton').addEventListener('click', function() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showStatus("Selecione um arquivo primeiro", "error");
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      
+      status.innerHTML = "Processando...";
+      status.className = "";
+      
+      reader.onload = function(e) {
+        try {
+          const fileContent = e.target.result;
+          const startIndex = fileContent.indexOf("window.dict=");
+          
+          if (startIndex === -1) {
+            throw new Error("Não encontrei 'window.dict=' no arquivo");
+          }
+          
+          // Extrair o texto JSON
+          let jsonText = fileContent.substring(startIndex + "window.dict=".length);
+          
+          // Converter de JS para objeto
+          const contacts = Function('return ' + jsonText)();
+          
+          if (!Array.isArray(contacts) || contacts.length === 0) {
+            throw new Error("Não consegui extrair dados válidos do arquivo");
+          }
+          
+          // Converter para JSON formatado
+          const jsonResult = JSON.stringify(contacts, null, 2);
+          
+          // Criar link para download
+          const blob = new Blob([jsonResult], {type: 'application/json'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'contacts.json';
+          a.className = 'download-link';
+          a.textContent = "⬇️ Baixar arquivo JSON";
+          
+          // Mostrar mensagem de sucesso
+          const successMessage = `
+            <p>✅ Conversão concluída com sucesso!</p>
+            <p>📊 Encontrados <strong>${contacts.length}</strong> contatos</p>
+            <p>📁 Tamanho do arquivo: <strong>${(jsonResult.length / 1024).toFixed(2)} KB</strong></p>
+          `;
+          
+          status.innerHTML = successMessage;
+          status.className = "success";
+          status.appendChild(a);
+          
+        } catch (error) {
+          showStatus("Erro ao processar o arquivo: " + error.message, "error");
+        }
+      };
+      
+      reader.onerror = function() {
+        showStatus("Erro ao ler o arquivo", "error");
+      };
+      
+      reader.readAsText(file);
+    });
+    
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = type;
+    }
+  </script>
+</body>
+</html>
